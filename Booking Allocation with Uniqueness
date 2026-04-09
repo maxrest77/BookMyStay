@@ -1,0 +1,152 @@
+import java.util.*;
+
+// ----- RESERVATION -----
+class Reservation {
+    private String guestName;
+    private String roomType;
+
+    public Reservation(String guestName, String roomType) {
+        this.guestName = guestName;
+        this.roomType = roomType;
+    }
+
+    public String getGuestName() {
+        return guestName;
+    }
+
+    public String getRoomType() {
+        return roomType;
+    }
+}
+
+// ----- BOOKING QUEUE (FIFO) -----
+class BookingQueue {
+    private Queue<Reservation> queue = new LinkedList<>();
+
+    public void addRequest(Reservation r) {
+        queue.offer(r);
+    }
+
+    public Reservation getNextRequest() {
+        return queue.poll();
+    }
+
+    public boolean isEmpty() {
+        return queue.isEmpty();
+    }
+}
+
+// ----- INVENTORY -----
+class RoomInventory {
+    private Map<String, Integer> availability = new HashMap<>();
+
+    public void addRoomType(String type, int count) {
+        availability.put(type, count);
+    }
+
+    public int getAvailability(String type) {
+        return availability.getOrDefault(type, 0);
+    }
+
+    public void decrement(String type) {
+        availability.put(type, getAvailability(type) - 1);
+    }
+}
+
+// ----- BOOKING SERVICE (CORE UC6) -----
+class BookingService {
+
+    // Track allocated room IDs (uniqueness)
+    private Set<String> allocatedRoomIds = new HashSet<>();
+
+    // Map room type → assigned room IDs
+    private Map<String, Set<String>> allocationMap = new HashMap<>();
+
+    // Generate unique room ID
+    private String generateRoomId(String roomType) {
+        String id;
+        do {
+            id = roomType.substring(0, 1).toUpperCase() + UUID.randomUUID().toString().substring(0, 5);
+        } while (allocatedRoomIds.contains(id)); // ensure uniqueness
+
+        return id;
+    }
+
+    // Process booking queue
+    public void processBookings(BookingQueue queue, RoomInventory inventory) {
+
+        System.out.println("\n----- PROCESSING BOOKINGS -----");
+
+        while (!queue.isEmpty()) {
+
+            Reservation r = queue.getNextRequest();
+            String type = r.getRoomType();
+
+            int available = inventory.getAvailability(type);
+
+            if (available > 0) {
+
+                // Generate unique room ID
+                String roomId = generateRoomId(type);
+
+                // Record ID globally (prevent reuse)
+                allocatedRoomIds.add(roomId);
+
+                // Map room type → room IDs
+                allocationMap.putIfAbsent(type, new HashSet<>());
+                allocationMap.get(type).add(roomId);
+
+                // Atomic step: update inventory immediately
+                inventory.decrement(type);
+
+                // Confirmation
+                System.out.println("Booking Confirmed: " +
+                        r.getGuestName() +
+                        " | Room Type: " + type +
+                        " | Room ID: " + roomId);
+
+            } else {
+                System.out.println("Booking Failed (No Availability): " +
+                        r.getGuestName() +
+                        " | Room Type: " + type);
+            }
+        }
+    }
+
+    // Display allocation summary
+    public void displayAllocations() {
+        System.out.println("\n----- ALLOCATED ROOMS -----");
+        for (Map.Entry<String, Set<String>> entry : allocationMap.entrySet()) {
+            System.out.println(entry.getKey() + " -> " + entry.getValue());
+        }
+    }
+}
+
+// ----- MAIN APPLICATION -----
+public class MainApp {
+
+    public static void main(String[] args) {
+
+        // Setup inventory
+        RoomInventory inventory = new RoomInventory();
+        inventory.addRoomType("Single", 2);
+        inventory.addRoomType("Double", 1);
+        inventory.addRoomType("Suite", 1);
+
+        // Setup queue (FIFO requests)
+        BookingQueue queue = new BookingQueue();
+        queue.addRequest(new Reservation("Alice", "Single"));
+        queue.addRequest(new Reservation("Bob", "Single"));
+        queue.addRequest(new Reservation("Charlie", "Single")); // should fail
+        queue.addRequest(new Reservation("David", "Suite"));
+
+        // Process bookings
+        BookingService service = new BookingService();
+        service.processBookings(queue, inventory);
+
+        // Show allocations
+        service.displayAllocations();
+
+        System.out.println("\nAll bookings processed.");
+    }
+}
