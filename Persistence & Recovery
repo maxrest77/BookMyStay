@@ -1,0 +1,149 @@
+import java.io.*;
+import java.util.*;
+
+// ----- RESERVATION -----
+class Reservation implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private String reservationId;
+    private String guestName;
+    private String roomType;
+
+    public Reservation(String reservationId, String guestName, String roomType) {
+        this.reservationId = reservationId;
+        this.guestName = guestName;
+        this.roomType = roomType;
+    }
+
+    public String getReservationId() { return reservationId; }
+    public String getRoomType() { return roomType; }
+
+    public void display() {
+        System.out.println(reservationId + " | " + guestName + " | " + roomType);
+    }
+}
+
+// ----- INVENTORY -----
+class RoomInventory implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private Map<String, Integer> availability = new HashMap<>();
+
+    public void addRoomType(String type, int count) {
+        availability.put(type, count);
+    }
+
+    public Map<String, Integer> getAvailabilityMap() {
+        return availability;
+    }
+
+    public void display() {
+        System.out.println("\nInventory:");
+        for (Map.Entry<String, Integer> e : availability.entrySet()) {
+            System.out.println(e.getKey() + " -> " + e.getValue());
+        }
+    }
+}
+
+// ----- BOOKING HISTORY -----
+class BookingHistory implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private List<Reservation> history = new ArrayList<>();
+
+    public void addReservation(Reservation r) {
+        history.add(r);
+    }
+
+    public List<Reservation> getAll() {
+        return history;
+    }
+
+    public void display() {
+        System.out.println("\nBooking History:");
+        for (Reservation r : history) {
+            r.display();
+        }
+    }
+}
+
+// ----- PERSISTENCE SERVICE -----
+class PersistenceService {
+
+    private static final String FILE_NAME = "hotel_state.dat";
+
+    // Save state
+    public void save(RoomInventory inventory, BookingHistory history) {
+        try (ObjectOutputStream oos =
+                     new ObjectOutputStream(new FileOutputStream(FILE_NAME))) {
+
+            oos.writeObject(inventory);
+            oos.writeObject(history);
+
+            System.out.println("\nState saved successfully.");
+
+        } catch (IOException e) {
+            System.out.println("Error saving state: " + e.getMessage());
+        }
+    }
+
+    // Load state
+    public Object[] load() {
+        try (ObjectInputStream ois =
+                     new ObjectInputStream(new FileInputStream(FILE_NAME))) {
+
+            RoomInventory inventory = (RoomInventory) ois.readObject();
+            BookingHistory history = (BookingHistory) ois.readObject();
+
+            System.out.println("State restored successfully.");
+            return new Object[]{inventory, history};
+
+        } catch (FileNotFoundException e) {
+            System.out.println("No saved state found. Starting fresh.");
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Corrupted data. Starting with clean state.");
+        }
+
+        return null; // fallback
+    }
+}
+
+// ----- MAIN APPLICATION -----
+public class MainApp {
+
+    public static void main(String[] args) {
+
+        PersistenceService persistence = new PersistenceService();
+
+        RoomInventory inventory;
+        BookingHistory history;
+
+        // ----- LOAD STATE (Startup) -----
+        Object[] data = persistence.load();
+
+        if (data != null) {
+            inventory = (RoomInventory) data[0];
+            history = (BookingHistory) data[1];
+        } else {
+            // Initialize fresh state
+            inventory = new RoomInventory();
+            inventory.addRoomType("Single", 2);
+            inventory.addRoomType("Double", 1);
+
+            history = new BookingHistory();
+        }
+
+        // ----- SIMULATE SYSTEM USAGE -----
+        history.addReservation(new Reservation("S1A2B", "Alice", "Single"));
+        history.addReservation(new Reservation("D9X3K", "Bob", "Double"));
+
+        // Display current state
+        inventory.display();
+        history.display();
+
+        // ----- SAVE STATE (Shutdown) -----
+        persistence.save(inventory, history);
+
+        System.out.println("\nSystem shutdown complete.");
+    }
+}
