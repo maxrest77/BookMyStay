@@ -1,0 +1,146 @@
+import java.util.*;
+
+// ----- RESERVATION -----
+class Reservation {
+    private String reservationId;
+    private String guestName;
+    private String roomType;
+    private boolean active;
+
+    public Reservation(String reservationId, String guestName, String roomType) {
+        this.reservationId = reservationId;
+        this.guestName = guestName;
+        this.roomType = roomType;
+        this.active = true;
+    }
+
+    public String getReservationId() {
+        return reservationId;
+    }
+
+    public String getRoomType() {
+        return roomType;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void cancel() {
+        this.active = false;
+    }
+}
+
+// ----- INVENTORY -----
+class RoomInventory {
+    private Map<String, Integer> availability = new HashMap<>();
+
+    public void addRoomType(String type, int count) {
+        availability.put(type, count);
+    }
+
+    public void increment(String type) {
+        availability.put(type, availability.getOrDefault(type, 0) + 1);
+    }
+
+    public int getAvailability(String type) {
+        return availability.getOrDefault(type, 0);
+    }
+}
+
+// ----- BOOKING HISTORY -----
+class BookingHistory {
+    private Map<String, Reservation> reservations = new HashMap<>();
+
+    public void addReservation(Reservation r) {
+        reservations.put(r.getReservationId(), r);
+    }
+
+    public Reservation getReservation(String id) {
+        return reservations.get(id);
+    }
+}
+
+// ----- CANCELLATION SERVICE (CORE UC10) -----
+class CancellationService {
+
+    // Stack for rollback (LIFO)
+    private Stack<String> rollbackStack = new Stack<>();
+
+    public void cancelBooking(String reservationId,
+                              BookingHistory history,
+                              RoomInventory inventory) {
+
+        System.out.println("\nProcessing cancellation for ID: " + reservationId);
+
+        Reservation r = history.getReservation(reservationId);
+
+        // Validation
+        if (r == null) {
+            System.out.println("Cancellation Failed: Reservation does not exist.");
+            return;
+        }
+
+        if (!r.isActive()) {
+            System.out.println("Cancellation Failed: Already cancelled.");
+            return;
+        }
+
+        // Step 1: Record room ID in rollback stack
+        rollbackStack.push(reservationId);
+
+        // Step 2: Restore inventory
+        inventory.increment(r.getRoomType());
+
+        // Step 3: Mark reservation as cancelled
+        r.cancel();
+
+        System.out.println("Cancellation Successful for Room Type: " + r.getRoomType());
+    }
+
+    // View rollback history
+    public void showRollbackStack() {
+        System.out.println("\n----- ROLLBACK STACK -----");
+        for (String id : rollbackStack) {
+            System.out.println(id);
+        }
+    }
+}
+
+// ----- MAIN APPLICATION -----
+public class MainApp {
+
+    public static void main(String[] args) {
+
+        // Setup inventory
+        RoomInventory inventory = new RoomInventory();
+        inventory.addRoomType("Single", 1);
+
+        // Setup booking history (simulating confirmed bookings)
+        BookingHistory history = new BookingHistory();
+
+        Reservation r1 = new Reservation("S1A2B", "Alice", "Single");
+        Reservation r2 = new Reservation("S9X3K", "Bob", "Single");
+
+        history.addReservation(r1);
+        history.addReservation(r2);
+
+        // Cancellation service
+        CancellationService cancelService = new CancellationService();
+
+        // Valid cancellation
+        cancelService.cancelBooking("S1A2B", history, inventory);
+
+        // Duplicate cancellation
+        cancelService.cancelBooking("S1A2B", history, inventory);
+
+        // Invalid ID
+        cancelService.cancelBooking("INVALID", history, inventory);
+
+        // Show rollback stack
+        cancelService.showRollbackStack();
+
+        System.out.println("\nUpdated Inventory (Single): " +
+                inventory.getAvailability("Single"));
+    }
+}
