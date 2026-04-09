@@ -1,0 +1,96 @@
+import java.util.*;
+
+// ----- ADD-ON SERVICE -----
+class AddOnService {
+    private String name;
+    private double price;
+
+    public AddOnService(String name, double price) {
+        this.name = name;
+        this.price = price;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public String getName() {
+        return name;
+    }
+}
+
+// ----- ADD-ON SERVICE MANAGER -----
+class AddOnServiceManager {
+
+    // Map: Reservation ID → List of Services
+    private Map<String, List<AddOnService>> serviceMap = new HashMap<>();
+
+    // Add service to reservation
+    public void addService(String reservationId, AddOnService service) {
+        serviceMap.putIfAbsent(reservationId, new ArrayList<>());
+        serviceMap.get(reservationId).add(service);
+    }
+
+    // Get services for a reservation
+    public List<AddOnService> getServices(String reservationId) {
+        return serviceMap.getOrDefault(reservationId, new ArrayList<>());
+    }
+
+    // Calculate total cost of services
+    public double calculateTotalCost(String reservationId) {
+        double total = 0;
+        for (AddOnService s : getServices(reservationId)) {
+            total += s.getPrice();
+        }
+        return total;
+    }
+
+    // Display services
+    public void displayServices(String reservationId) {
+        List<AddOnService> services = getServices(reservationId);
+
+        System.out.println("\nServices for Reservation ID: " + reservationId);
+
+        if (services.isEmpty()) {
+            System.out.println("No add-on services selected.");
+            return;
+        }
+
+        for (AddOnService s : services) {
+            System.out.println("- " + s.getName() + " (₹" + s.getPrice() + ")");
+        }
+
+        System.out.println("Total Add-On Cost: ₹" + calculateTotalCost(reservationId));
+    }
+}
+
+// ----- MAIN APPLICATION -----
+public class MainApp {
+
+    public static void main(String[] args) {
+
+        // Assume these reservation IDs come from UC6 booking system
+        String res1 = "S1A2B";
+        String res2 = "D9X3K";
+
+        // Create services
+        AddOnService breakfast = new AddOnService("Breakfast", 300);
+        AddOnService wifi = new AddOnService("WiFi", 100);
+        AddOnService airportPickup = new AddOnService("Airport Pickup", 800);
+
+        // Service manager
+        AddOnServiceManager manager = new AddOnServiceManager();
+
+        // Guest selects services
+        manager.addService(res1, breakfast);
+        manager.addService(res1, wifi);
+
+        manager.addService(res2, airportPickup);
+
+        // Display services
+        manager.displayServices(res1);
+        manager.displayServices(res2);
+
+        System.out.println("\nCore booking and inventory remain unchanged.");
+    }
+}
