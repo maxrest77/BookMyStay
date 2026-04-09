@@ -1,0 +1,130 @@
+import java.util.*;
+
+// ----- CUSTOM EXCEPTIONS -----
+class InvalidRoomTypeException extends Exception {
+    public InvalidRoomTypeException(String message) {
+        super(message);
+    }
+}
+
+class NoAvailabilityException extends Exception {
+    public NoAvailabilityException(String message) {
+        super(message);
+    }
+}
+
+// ----- RESERVATION -----
+class Reservation {
+    private String guestName;
+    private String roomType;
+
+    public Reservation(String guestName, String roomType) {
+        this.guestName = guestName;
+        this.roomType = roomType;
+    }
+
+    public String getGuestName() {
+        return guestName;
+    }
+
+    public String getRoomType() {
+        return roomType;
+    }
+}
+
+// ----- INVENTORY -----
+class RoomInventory {
+    private Map<String, Integer> availability = new HashMap<>();
+
+    public void addRoomType(String type, int count) {
+        availability.put(type, count);
+    }
+
+    public int getAvailability(String type) {
+        return availability.getOrDefault(type, -1); // -1 = invalid type
+    }
+
+    public void decrement(String type) throws NoAvailabilityException {
+        int count = getAvailability(type);
+
+        if (count <= 0) {
+            throw new NoAvailabilityException("No rooms available for type: " + type);
+        }
+
+        availability.put(type, count - 1);
+    }
+
+    public boolean isValidRoomType(String type) {
+        return availability.containsKey(type);
+    }
+}
+
+// ----- VALIDATOR (FAIL-FAST) -----
+class BookingValidator {
+
+    public static void validate(Reservation r, RoomInventory inventory)
+            throws InvalidRoomTypeException, NoAvailabilityException {
+
+        // Validate room type
+        if (!inventory.isValidRoomType(r.getRoomType())) {
+            throw new InvalidRoomTypeException(
+                    "Invalid room type: " + r.getRoomType());
+        }
+
+        // Validate availability
+        if (inventory.getAvailability(r.getRoomType()) <= 0) {
+            throw new NoAvailabilityException(
+                    "No availability for room type: " + r.getRoomType());
+        }
+    }
+}
+
+// ----- BOOKING SERVICE -----
+class BookingService {
+
+    public void processBooking(Reservation r, RoomInventory inventory) {
+
+        try {
+            // FAIL-FAST validation
+            BookingValidator.validate(r, inventory);
+
+            // If validation passes → proceed
+            inventory.decrement(r.getRoomType());
+
+            System.out.println("Booking Successful: " +
+                    r.getGuestName() +
+                    " | Room: " + r.getRoomType());
+
+        } catch (InvalidRoomTypeException | NoAvailabilityException e) {
+            // Graceful failure
+            System.out.println("Booking Failed: " + e.getMessage());
+        }
+    }
+}
+
+// ----- MAIN APPLICATION -----
+public class MainApp {
+
+    public static void main(String[] args) {
+
+        RoomInventory inventory = new RoomInventory();
+        inventory.addRoomType("Single", 1);
+        inventory.addRoomType("Double", 0);
+
+        BookingService service = new BookingService();
+
+        // Valid booking
+        service.processBooking(new Reservation("Alice", "Single"), inventory);
+
+        // No availability
+        service.processBooking(new Reservation("Bob", "Double"), inventory);
+
+        // Invalid room type
+        service.processBooking(new Reservation("Charlie", "Suite"), inventory);
+
+        // Attempt to overbook
+        service.processBooking(new Reservation("David", "Single"), inventory);
+
+        System.out.println("\nSystem continues running safely.");
+    }
+}
