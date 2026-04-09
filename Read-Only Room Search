@@ -1,0 +1,127 @@
+import java.util.*;
+
+// ----- DOMAIN MODEL -----
+abstract class Room {
+    protected String roomType;
+    protected int beds;
+    protected double size;
+    protected double price;
+
+    public Room(String roomType, int beds, double size, double price) {
+        this.roomType = roomType;
+        this.beds = beds;
+        this.size = size;
+        this.price = price;
+    }
+
+    public String getRoomType() {
+        return roomType;
+    }
+
+    public abstract void displayDetails();
+}
+
+class SingleRoom extends Room {
+    public SingleRoom() {
+        super("Single", 1, 200, 1000);
+    }
+
+    @Override
+    public void displayDetails() {
+        System.out.println("Single Room | Beds: " + beds + " | Size: " + size + " | Price: ₹" + price);
+    }
+}
+
+class DoubleRoom extends Room {
+    public DoubleRoom() {
+        super("Double", 2, 350, 1800);
+    }
+
+    @Override
+    public void displayDetails() {
+        System.out.println("Double Room | Beds: " + beds + " | Size: " + size + " | Price: ₹" + price);
+    }
+}
+
+class SuiteRoom extends Room {
+    public SuiteRoom() {
+        super("Suite", 3, 600, 4000);
+    }
+
+    @Override
+    public void displayDetails() {
+        System.out.println("Suite Room | Beds: " + beds + " | Size: " + size + " | Price: ₹" + price);
+    }
+}
+
+// ----- INVENTORY (STATE HOLDER) -----
+class RoomInventory {
+
+    private Map<String, Integer> availability;
+
+    public RoomInventory() {
+        availability = new HashMap<>();
+    }
+
+    public void addRoomType(String type, int count) {
+        availability.put(type, count);
+    }
+
+    public int getAvailability(String type) {
+        return availability.getOrDefault(type, 0);
+    }
+
+    public Map<String, Integer> getAllAvailability() {
+        return Collections.unmodifiableMap(availability); // read-only view
+    }
+
+    // (No booking/update used in search)
+}
+
+// ----- SEARCH SERVICE (READ-ONLY) -----
+class SearchService {
+
+    public void searchAvailableRooms(RoomInventory inventory, List<Room> rooms) {
+
+        System.out.println("\n----- AVAILABLE ROOMS -----");
+
+        Map<String, Integer> availabilityMap = inventory.getAllAvailability();
+
+        for (Room room : rooms) {
+
+            int available = availabilityMap.getOrDefault(room.getRoomType(), 0);
+
+            // Validation: show only available rooms
+            if (available > 0) {
+                room.displayDetails();
+                System.out.println("Available: " + available + "\n");
+            }
+        }
+    }
+}
+
+// ----- MAIN APPLICATION -----
+public class MainApp {
+
+    public static void main(String[] args) {
+
+        // Domain objects
+        Room single = new SingleRoom();
+        Room dbl = new DoubleRoom();
+        Room suite = new SuiteRoom();
+
+        List<Room> rooms = Arrays.asList(single, dbl, suite);
+
+        // Inventory setup
+        RoomInventory inventory = new RoomInventory();
+        inventory.addRoomType("Single", 5);
+        inventory.addRoomType("Double", 0); // will be filtered
+        inventory.addRoomType("Suite", 2);
+
+        // Search (READ-ONLY)
+        SearchService searchService = new SearchService();
+        searchService.searchAvailableRooms(inventory, rooms);
+
+        System.out.println("\nSearch completed. No state modified.");
+    }
+}
