@@ -1,0 +1,146 @@
+import java.util.HashMap;
+import java.util.Map;
+
+// Abstract Room (same as UC2)
+abstract class Room {
+    protected String roomType;
+    protected int beds;
+    protected double size;
+    protected double price;
+
+    public Room(String roomType, int beds, double size, double price) {
+        this.roomType = roomType;
+        this.beds = beds;
+        this.size = size;
+        this.price = price;
+    }
+
+    public String getRoomType() {
+        return roomType;
+    }
+
+    public abstract void displayDetails();
+}
+
+class SingleRoom extends Room {
+    public SingleRoom() {
+        super("Single", 1, 200, 1000);
+    }
+
+    @Override
+    public void displayDetails() {
+        System.out.println("Single Room | Beds: " + beds + " | Size: " + size + " | Price: ₹" + price);
+    }
+}
+
+class DoubleRoom extends Room {
+    public DoubleRoom() {
+        super("Double", 2, 350, 1800);
+    }
+
+    @Override
+    public void displayDetails() {
+        System.out.println("Double Room | Beds: " + beds + " | Size: " + size + " | Price: ₹" + price);
+    }
+}
+
+class SuiteRoom extends Room {
+    public SuiteRoom() {
+        super("Suite", 3, 600, 4000);
+    }
+
+    @Override
+    public void displayDetails() {
+        System.out.println("Suite Room | Beds: " + beds + " | Size: " + size + " | Price: ₹" + price);
+    }
+}
+
+// Inventory Class (CORE of UC3)
+class RoomInventory {
+
+    private Map<String, Integer> availability;
+
+    // Constructor initialization
+    public RoomInventory() {
+        availability = new HashMap<>();
+    }
+
+    // Register room types with initial count
+    public void addRoomType(String type, int count) {
+        availability.put(type, count);
+    }
+
+    // Get availability
+    public int getAvailability(String type) {
+        return availability.getOrDefault(type, 0);
+    }
+
+    // Update availability (controlled)
+    public void updateAvailability(String type, int newCount) {
+        if (availability.containsKey(type)) {
+            availability.put(type, newCount);
+        } else {
+            System.out.println("Room type not found: " + type);
+        }
+    }
+
+    // Book room (decrement)
+    public boolean bookRoom(String type) {
+        int count = getAvailability(type);
+        if (count > 0) {
+            availability.put(type, count - 1);
+            return true;
+        }
+        return false;
+    }
+
+    // Display inventory
+    public void displayInventory() {
+        System.out.println("\n----- ROOM INVENTORY -----");
+        for (Map.Entry<String, Integer> entry : availability.entrySet()) {
+            System.out.println(entry.getKey() + " Rooms Available: " + entry.getValue());
+        }
+    }
+}
+
+// Main Application
+public class MainApp {
+
+    public static void main(String[] args) {
+
+        // Initialize rooms (Domain)
+        Room single = new SingleRoom();
+        Room dbl = new DoubleRoom();
+        Room suite = new SuiteRoom();
+
+        // Initialize Inventory (State)
+        RoomInventory inventory = new RoomInventory();
+
+        // Register availability
+        inventory.addRoomType(single.getRoomType(), 5);
+        inventory.addRoomType(dbl.getRoomType(), 3);
+        inventory.addRoomType(suite.getRoomType(), 2);
+
+        // Display room details
+        System.out.println("----- ROOM DETAILS -----\n");
+        single.displayDetails();
+        dbl.displayDetails();
+        suite.displayDetails();
+
+        // Display inventory
+        inventory.displayInventory();
+
+        // Simulate booking
+        System.out.println("\nBooking a Single Room...");
+        if (inventory.bookRoom("Single")) {
+            System.out.println("Booking Successful!");
+        } else {
+            System.out.println("No rooms available!");
+        }
+
+        // Updated inventory
+        inventory.displayInventory();
+
+        System.out.println("\nApplication Terminated.");
+    }
+}
